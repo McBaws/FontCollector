@@ -35,6 +35,36 @@ class FontLoader:
     the user to load the font file from a various source.
     """
 
+    # Maps an absolute font path to the (st_mtime_ns, st_size) of the file when it was loaded and its FontFile.
+    _additional_fonts_cache: dict[Path, tuple[int, int, FontFile]] = {}
+
+    @staticmethod
+    def _load_additional_font_file(font_path: Path) -> FontFile:
+        """Load a font file, reusing the previously loaded FontFile if the file hasn't changed since.
+
+        We don't compare st_ctime with FontFile.last_loaded_time like for the system fonts,
+        because on Windows st_ctime is the creation time, which doesn't change when a file is overwritten.
+
+        Args:
+            font_path: Font path.
+        Returns:
+            The FontFile representing the font at the given path. Its filename is font_path as it was passed.
+        """
+        stat = font_path.stat()
+        cache_key = font_path.absolute()
+        cached = FontLoader._additional_fonts_cache.get(cache_key)
+        if (
+            cached is not None
+            and cached[0] == stat.st_mtime_ns
+            and cached[1] == stat.st_size
+            and cached[2].filename == font_path
+        ):
+            return cached[2]
+
+        font_file = FontFile.from_font_path(font_path)
+        FontLoader._additional_fonts_cache[cache_key] = (stat.st_mtime_ns, stat.st_size, font_file)
+        return font_file
+
     @staticmethod
     def load_font_cache_file(cache_file: Path) -> list[FontFile]:
         """Load the cache file and retrieve the list of cached fonts from it.
@@ -109,7 +139,7 @@ class FontLoader:
         for font_path in additional_fonts_path:
             if font_path.is_file():
                 try:
-                    additional_fonts.append(FontFile.from_font_path(font_path))
+                    additional_fonts.append(FontLoader._load_additional_font_file(font_path))
                 except InvalidFontException as e:
                     _logger.info(f"{e}. The font {font_path} will be ignored.")
             elif font_path.is_dir():
@@ -119,14 +149,14 @@ class FontLoader:
                             file_path = Path(os.path.join(root, name))
                             if is_file_font(file_path):
                                 try:
-                                    additional_fonts.append(FontFile.from_font_path(file_path))
+                                    additional_fonts.append(FontLoader._load_additional_font_file(file_path))
                                 except InvalidFontException as e:
                                     _logger.info(f"{e}. The font {file_path} will be ignored.")
                 else:
                     for path in font_path.iterdir():
                         if path.is_file() and is_file_font(path):
                             try:
-                                additional_fonts.append(FontFile.from_font_path(path))
+                                additional_fonts.append(FontLoader._load_additional_font_file(path))
                             except InvalidFontException as e:
                                 _logger.info(f"{e}. The font {path} will be ignored.")
             else:

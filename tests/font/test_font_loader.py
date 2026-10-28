@@ -1,5 +1,7 @@
 import os
+import shutil
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from font_collector import FontLoader
 
@@ -74,3 +76,29 @@ def test_load_additional_fonts():
         Path(os.path.join(font_directory_sub_dir, "generated_fonts", "Raleway-Thin.ttf - generated.ttf")),
     ]
     assert sorted(result) == sorted(expected_result)
+
+
+def test_load_additional_fonts_cache():
+    font_path = Path(os.path.join(os.path.dirname(dir_path), "file", "fonts", "font_mac.TTF"))
+    other_font_path = Path(os.path.join(os.path.dirname(dir_path), "file", "fonts", "font_cmap_encoding_1.ttf"))
+
+    with TemporaryDirectory() as tmp_dir:
+        tmp_font = Path(tmp_dir, "font.ttf")
+        shutil.copyfile(font_path, tmp_font)
+
+        # An unchanged font is only loaded once
+        first = FontLoader.load_additional_fonts([tmp_font])
+        second = FontLoader.load_additional_fonts([tmp_font])
+        assert first[0] is second[0]
+
+        # A font overwritten in place is loaded again
+        shutil.copyfile(other_font_path, tmp_font)
+        third = FontLoader.load_additional_fonts([tmp_font])
+        assert third[0] is not first[0]
+        assert third[0].font_faces == FontLoader.load_additional_fonts([other_font_path])[0].font_faces
+
+        # The font keeps the path it was loaded with
+        relative_font = Path(os.path.relpath(tmp_font))
+        fourth = FontLoader.load_additional_fonts([relative_font])
+        assert fourth[0].filename == relative_font
+        assert FontLoader.load_additional_fonts([tmp_font])[0].filename == tmp_font
