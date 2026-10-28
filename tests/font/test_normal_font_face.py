@@ -170,6 +170,16 @@ def test_font_get_missing_glyphs_cmap_encoding_1():
     assert missing_glyphs == set()
 
 
+def test_font_get_missing_glyphs_default_ignorable():
+    font_cmap_encoding_1 = Path(os.path.join(os.path.dirname(dir_path), "file", "fonts", "font_cmap_encoding_1.ttf"))
+    font_file = FontFile.from_font_path(font_cmap_encoding_1)
+    font_face = font_file.font_faces[0]
+
+    # The font doesn't have glyphs for these bidi controls, but they are never drawn
+    missing_glyphs = font_face.get_missing_glyphs(string.digits + "‫‬‏")
+    assert missing_glyphs == set()
+
+
 def test_font_get_missing_glyphs_cmap_encoding_2():
     font_cmap_encoding_2 = Path(os.path.join(os.path.dirname(dir_path), "file", "fonts", "font_cmap_encoding_2.TTF"))
     font_file = FontFile.from_font_path(font_cmap_encoding_2)

@@ -38,6 +38,27 @@ class FontParser:
         178: arabic_simplified_cmap_mapping,
         179: arabic_traditional_cmap_mapping,
     }
+    # Default_Ignorable_Code_Point from https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
+    # Renderers don't draw these characters (e.g. bidi controls), so fonts don't need a glyph for them.
+    DEFAULT_IGNORABLE_CODE_POINTS: tuple[range, ...] = (
+        range(0x00AD, 0x00AD + 1),
+        range(0x034F, 0x034F + 1),
+        range(0x061C, 0x061C + 1),
+        range(0x115F, 0x1160 + 1),
+        range(0x17B4, 0x17B5 + 1),
+        range(0x180B, 0x180F + 1),
+        range(0x200B, 0x200F + 1),
+        range(0x202A, 0x202E + 1),
+        range(0x2060, 0x206F + 1),
+        range(0x3164, 0x3164 + 1),
+        range(0xFE00, 0xFE0F + 1),
+        range(0xFEFF, 0xFEFF + 1),
+        range(0xFFA0, 0xFFA0 + 1),
+        range(0xFFF0, 0xFFF8 + 1),
+        range(0x1BCA0, 0x1BCA3 + 1),
+        range(0x1D173, 0x1D17A + 1),
+        range(0xE0000, 0xE0FFF + 1),
+    )
 
 
     @staticmethod
@@ -537,6 +558,19 @@ class FontParser:
                     elif charmap.platform_id == PlatformID.MACINTOSH:
                         macintosh_cmaps.append(cmap)
         return macintosh_cmaps if len(microsoft_cmaps) == 0 else microsoft_cmaps
+
+
+    @staticmethod
+    def is_default_ignorable(character: str) -> bool:
+        """
+        Args:
+            character: A single character.
+        Returns:
+            True if the character is a default ignorable code point, which renderers don't draw.
+            Otherwise, False.
+        """
+        codepoint = ord(character)
+        return any(codepoint in code_points for code_points in FontParser.DEFAULT_IGNORABLE_CODE_POINTS)
 
 
     @staticmethod

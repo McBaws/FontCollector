@@ -251,6 +251,7 @@ class ABCFontFace(ABC):
                 For more details, see the issue: https://github.com/libass/libass/issues/319
         Returns:
             A set of all the characters that the font doesn't support.
+            Default ignorable characters (e.g. bidi controls) are never included since they aren't drawn.
         """
         if self.font_file is None:
             raise ValueError("This font_face isn't linked to any FontFile.")
@@ -289,6 +290,9 @@ class ABCFontFace(ABC):
             supported_charmaps.append(charmap)
 
         for char in text:
+            if FontParser.is_default_ignorable(char):
+                continue
+
             char_found = False
 
             for charmap in supported_charmaps:
