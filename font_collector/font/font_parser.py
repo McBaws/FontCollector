@@ -3,10 +3,9 @@ from __future__ import annotations
 from ctypes import byref, c_uint, create_string_buffer
 from itertools import product
 from pathlib import Path
-from struct import error as struct_error
+from struct import error as struct_error, unpack_from
 from typing import Any
 
-from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 from fontTools.ttLib.tables._n_a_m_e import NameRecord
 from fontTools.ttLib.ttFont import TTFont
 from fontTools.varLib.instancer.names import ELIDABLE_AXIS_VALUE_NAME
@@ -516,14 +515,18 @@ class FontParser:
         macintosh_cmaps: list[CMap] = []
 
         try:
-            cmap_tables: list[CmapSubtable] = font["cmap"].tables
+            # Only the platform and encoding ids from the cmap subtable directory are needed.
+            # Loading font["cmap"] can decompile whole subtables (and the glyph order), which is very slow for fonts with many glyphs.
+            cmap_data = font.getTableData("cmap")
+            _, num_subtables = unpack_from(">HH", cmap_data)
 
-            for table in cmap_tables:
-                if FontParser.is_cmap_supported(table.platformID, table.platEncID):
-                    cmap = CMap(table.platformID, table.platEncID)
-                    if table.platformID == PlatformID.MICROSOFT:
+            for i in range(num_subtables):
+                platform_id, encoding_id, _ = unpack_from(">HHL", cmap_data, 4 + i * 8)
+                if FontParser.is_cmap_supported(platform_id, encoding_id):
+                    cmap = CMap(platform_id, encoding_id)
+                    if platform_id == PlatformID.MICROSOFT:
                         microsoft_cmaps.append(cmap)
-                    elif table.platformID == PlatformID.MACINTOSH:
+                    elif platform_id == PlatformID.MACINTOSH:
                         macintosh_cmaps.append(cmap)
         except Exception:
             with font_path.open("rb") as f:

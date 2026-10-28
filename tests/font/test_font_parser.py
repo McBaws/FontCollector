@@ -229,6 +229,14 @@ def test_get_supported_cmaps():
     assert cmaps == [CMap(3, 1)]
 
 
+def test_get_supported_cmaps_does_not_parse_cmap_table():
+    # Only the cmap's subtable directory is needed, parsing the whole table is very slow on big fonts
+    font_path = Path(os.path.join(os.path.dirname(dir_path), "file", "fonts", "font_cmap_encoding_1.ttf"))
+    font = TTFont(font_path)
+    FontParser.get_supported_cmaps(font, font_path, 0)
+    assert not font.isLoaded("cmap")
+
+
 def test_is_cmap_supported():
     # It could be any format
     cmap_format = 0
