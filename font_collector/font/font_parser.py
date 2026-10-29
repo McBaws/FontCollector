@@ -38,26 +38,18 @@ class FontParser:
         178: arabic_simplified_cmap_mapping,
         179: arabic_traditional_cmap_mapping,
     }
-    # Default_Ignorable_Code_Point from https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
-    # Renderers don't draw these characters (e.g. bidi controls), so fonts don't need a glyph for them.
-    DEFAULT_IGNORABLE_CODE_POINTS: tuple[range, ...] = (
-        range(0x00AD, 0x00AD + 1),
+    # Subset of Unicode's Default_Ignorable_Code_Point that both libass and VSFilter ignore
+    # libass skips them before looking up glyphs: https://github.com/libass/libass/blob/fe25f50686b1a6babef2f9b703abead0e97e0fec/libass/ass_shaper.c#L818-L870
+    # VSFilter draws text with GDI's TextOutW, which gives them no width and no outline
+    INVISIBLE_CODE_POINTS: tuple[range, ...] = (
         range(0x034F, 0x034F + 1),
         range(0x061C, 0x061C + 1),
-        range(0x115F, 0x1160 + 1),
-        range(0x17B4, 0x17B5 + 1),
-        range(0x180B, 0x180F + 1),
         range(0x200B, 0x200F + 1),
         range(0x202A, 0x202E + 1),
-        range(0x2060, 0x206F + 1),
-        range(0x3164, 0x3164 + 1),
-        range(0xFE00, 0xFE0F + 1),
+        range(0x2061, 0x2064 + 1),
+        range(0x206A, 0x206F + 1),
         range(0xFEFF, 0xFEFF + 1),
-        range(0xFFA0, 0xFFA0 + 1),
-        range(0xFFF0, 0xFFF8 + 1),
-        range(0x1BCA0, 0x1BCA3 + 1),
         range(0x1D173, 0x1D17A + 1),
-        range(0xE0000, 0xE0FFF + 1),
     )
 
 
@@ -561,16 +553,16 @@ class FontParser:
 
 
     @staticmethod
-    def is_default_ignorable(character: str) -> bool:
+    def is_invisible(character: str) -> bool:
         """
         Args:
             character: A single character.
         Returns:
-            True if the character is a default ignorable code point, which renderers don't draw.
+            True if libass and VSFilter don't draw the character, even when the font doesn't have it.
             Otherwise, False.
         """
         codepoint = ord(character)
-        return any(codepoint in code_points for code_points in FontParser.DEFAULT_IGNORABLE_CODE_POINTS)
+        return any(codepoint in code_points for code_points in FontParser.INVISIBLE_CODE_POINTS)
 
 
     @staticmethod
