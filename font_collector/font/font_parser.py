@@ -518,8 +518,10 @@ class FontParser:
             # Only the platform and encoding ids from the cmap subtable directory are needed.
             # Loading font["cmap"] can decompile whole subtables (and the glyph order), which is very slow for fonts with many glyphs.
             cmap_data = font.getTableData("cmap")
+            # https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#cmap-header
             _, num_subtables = unpack_from(">HH", cmap_data)
 
+            # https://learn.microsoft.com/en-us/typography/opentype/spec/cmap#encoding-records-and-encodings
             for i in range(num_subtables):
                 platform_id, encoding_id, _ = unpack_from(">HHL", cmap_data, 4 + i * 8)
                 if FontParser.is_cmap_supported(platform_id, encoding_id):
