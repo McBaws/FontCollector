@@ -251,7 +251,7 @@ class ABCFontFace(ABC):
                 For more details, see the issue: https://github.com/libass/libass/issues/319
         Returns:
             A set of all the characters that the font doesn't support.
-            Characters that libass and VSFilter don't draw (e.g. bidi controls) are never included.
+            Characters that libass doesn't draw (e.g. bidi controls) are never included.
         """
         if self.font_file is None:
             raise ValueError("This font_face isn't linked to any FontFile.")

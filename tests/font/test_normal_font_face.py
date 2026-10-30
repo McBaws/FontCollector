@@ -175,13 +175,9 @@ def test_font_get_missing_glyphs_invisible():
     font_file = FontFile.from_font_path(font_cmap_encoding_1)
     font_face = font_file.font_faces[0]
 
-    # The font doesn't have glyphs for these bidi controls, but they are never drawn
-    missing_glyphs = font_face.get_missing_glyphs(string.digits + "‫‬‏")
+    # The font doesn't have glyphs for these, but libass never draws them
+    missing_glyphs = font_face.get_missing_glyphs("\u00AD\u200B\u202B\u202C\u200F\u2060\uFEFF\U000E0001")
     assert missing_glyphs == set()
-
-    # U+2060 is default ignorable, but VSFilter draws a box for it when the font doesn't have it
-    missing_glyphs = font_face.get_missing_glyphs("⁠")
-    assert missing_glyphs == {"⁠"}
 
 
 def test_font_get_missing_glyphs_cmap_encoding_2():

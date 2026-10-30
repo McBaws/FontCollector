@@ -38,19 +38,6 @@ class FontParser:
         178: arabic_simplified_cmap_mapping,
         179: arabic_traditional_cmap_mapping,
     }
-    # Subset of Unicode's Default_Ignorable_Code_Point that both libass and VSFilter ignore
-    # libass skips them before looking up glyphs: https://github.com/libass/libass/blob/fe25f50686b1a6babef2f9b703abead0e97e0fec/libass/ass_shaper.c#L818-L870
-    # VSFilter draws text with GDI's TextOutW, which gives them no width and no outline
-    INVISIBLE_CODE_POINTS: tuple[range, ...] = (
-        range(0x034F, 0x034F + 1),
-        range(0x061C, 0x061C + 1),
-        range(0x200B, 0x200F + 1),
-        range(0x202A, 0x202E + 1),
-        range(0x2061, 0x2064 + 1),
-        range(0x206A, 0x206F + 1),
-        range(0xFEFF, 0xFEFF + 1),
-        range(0x1D173, 0x1D17A + 1),
-    )
 
 
     @staticmethod
@@ -558,11 +545,34 @@ class FontParser:
         Args:
             character: A single character.
         Returns:
-            True if libass and VSFilter don't draw the character, even when the font doesn't have it.
+            True if libass doesn't draw the character, even when the font doesn't have it.
             Otherwise, False.
         """
-        codepoint = ord(character)
-        return any(codepoint in code_points for code_points in FontParser.INVISIBLE_CODE_POINTS)
+        # Copied from libass: https://github.com/libass/libass/blob/fe25f50686b1a6babef2f9b703abead0e97e0fec/libass/ass_shaper.c#L822-L839
+        symbol = ord(character)
+        high = symbol >> 8
+        if high == 0x00:
+            return symbol == 0x00AD
+        elif high == 0x03:
+            return symbol == 0x034F
+        elif high == 0x06:
+            return symbol == 0x061C
+        elif high == 0x17:
+            return 0x17B4 <= symbol <= 0x17B5
+        elif high == 0x18:
+            return 0x180B <= symbol <= 0x180E
+        elif high == 0x20:
+            return (0x200B <= symbol <= 0x200F or
+                    0x202A <= symbol <= 0x202E or
+                    0x2060 <= symbol <= 0x206F)
+        elif high == 0xFE:
+            return 0xFE00 <= symbol <= 0xFE0F or symbol == 0xFEFF
+        elif high == 0xFF:
+            return 0xFFF0 <= symbol <= 0xFFF8
+        elif high == 0x1D1:
+            return 0x1D173 <= symbol <= 0x1D17A
+        else:
+            return 0xE0000 <= symbol <= 0xE0FFF
 
 
     @staticmethod
